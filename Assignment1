@@ -1,0 +1,301 @@
+# Assignment 1 CMPUT 175
+# Outputs to screen and prints to file a chart of items needed for purchase with subtotals and total
+
+# Note: some helpful ideas were taken from Stack Overflow and Programiz. In particular the 
+# "with open(filename) as f:" was taken from Stack Overflow.
+
+
+
+def getSuppliersFile():
+    """
+    Gets suppliers file
+    Input: none
+    Returns: supplierDict of following structure: {supplier phone:(name of company, address)}
+    """
+    supplierDict = {}
+    suppliersFile = 'suppliers.txt'
+    with open(suppliersFile, 'r') as f:
+        for line in f:
+            line = line.split(';')
+            supplierDict[line[0]]=(line[1].strip(),line[2].strip()) 
+    return supplierDict
+    
+
+def getInventoryFile():
+    """
+    Gets inventory file
+    Input: none
+    Returns: inventoryDict of following structure: {product #: number of items on shelf}
+    """    
+    
+    inventoryFile = 'inventory.txt'
+    #input('Please input title of your inventory file here:')
+    
+    inventoryDict = {}
+    
+    with open(inventoryFile,'r') as f:
+        for line in f:          
+            line = line.split('#')                      
+            inventoryDict[line[0]]=(line[1].strip()) 
+        return inventoryDict
+    
+  
+    
+def getProductsFile():
+    """
+    Gets products file
+    Input: none
+    Returns: productsDict of following structure: {product #: product name}
+    """        
+    # Get products file from user and read into a dictionary, KEY: product code, VALUE: name of product.
+    productsFile = 'products.txt'
+    #input('Please input title of your products file:')
+    
+    productsDict = {}
+        
+    with open(productsFile,'r') as f:
+        for line in f:          
+            line = line.split(';')                      
+            productsDict[line[0]]=(line[1].strip()) 
+        return productsDict
+    
+def getNeededItems(inventoryDict):
+    """
+        Determines which items are needed for purchase (items with < 20 on shelf)
+        Input: inventoryDict
+        Returns: neededItemsDict of following structure: {product #: number of items needed for purchase}
+    """        
+    
+    neededItemsDict = {}
+    for k,v in inventoryDict.items():
+        if int(v) < 20:
+            neededItemsDict[k]=(v)
+    return neededItemsDict
+
+def getQuantityNeeded(neededItemsDict):
+    """
+        Determines how much of a needed item needs to be purchased
+        Input: neededItemsDict
+        Returns: orderQuantityDict of following structure: {product #: quantity needed for purchase}
+    """        
+    
+    
+    
+    # Calculate the exact number of items needed for each product
+    # returns a tuple: (product code,quantity needed)
+    orderQuantityDict = {}
+    for k,v in neededItemsDict.items():
+        
+        orderQuantity = 50 - int(v)
+        orderQuantityDict[k]=orderQuantity
+    return orderQuantityDict
+
+#def getSupplier(neededItemsDict):
+    """
+        Get supplier's phone number corresponding to the lowest price
+        Input: neededItemsDict
+        Returns: Supplier's phone number
+    """        
+    
+    ## Get the supplier's phone # corresponding to the lowest price.
+    ## Return the supplier's phone #.
+    #supplierPhoneDict = {}
+    #for k,v in neededItemsDict.items():
+        
+        #orderQuantity = 50 - int(v)
+        #orderQuantityDict[k]=orderQuantity
+    #return orderQuantityDict
+        
+
+def getAvailability():
+    """
+        Get availability file from user showing cost per item and supplier
+        Input: none
+        Returns: itemsAvailableDict of structure {product code: [supp 1 phone, cost,supp 2 phone, cost...],product code:[supp 1 phone: cost]}
+    """    
+    
+    itemsAvailable = 'availability.txt'
+    #input('Please input title of your availability file:')
+    
+    itemsAvailableDict = {}
+    supplierDict = {}
+    #overFlowDict = {}
+        
+    with open(itemsAvailable,'r') as f:
+        for line in f:          
+            line = line.split(',')
+            #print(line)
+            #supplierDict[line[1]]=(line[2]); print(supplierDict)
+            #itemsAvailableDict[line[0]]=(supplierDict) 
+            if line[0] in itemsAvailableDict:
+                # If key already present, add other suppliers to a list, then extend the list already present. Else create a new key and list of suppliers
+                phoneCostElements = [line[1].strip(),float(line[2].strip())]
+                itemsAvailableDict[line[0]].extend(phoneCostElements)
+            #itemsAvailableDict[line[0]]=supplierDict[line[1]]=(line[2]) 
+            else:               
+                itemsAvailableDict[line[0]]=[line[1].strip(),float(line[2].strip())]
+        return itemsAvailableDict
+
+
+def findLowestPrice(neededItemsDict,itemsAvailableDict):
+    """
+        Determine lowest price for a given product
+        Input: neededItemsDict,itemsAvailableDict
+        Returns: lowestPriceDict of structure: {'product code': ['supp phone', cost],
+    """    
+    
+    c = 1
+    lowestPriceDict = {}
+    for key in neededItemsDict:
+        #print('\n',neededItemsDict,'\n',key)
+        # If two suppliers available, take cheapest
+        if len(itemsAvailableDict[key]) > 2:                
+            if itemsAvailableDict[key][c] < itemsAvailableDict[key][c+2]:
+                
+                lowestPriceDict[key]=[itemsAvailableDict[key][c-1],itemsAvailableDict[key][c]] 
+            else:
+                
+                lowestPriceDict[key]=[itemsAvailableDict[key][c+1],itemsAvailableDict[key][c+2]]
+                
+        else:
+            
+            lowestPriceDict[key]=[itemsAvailableDict[key][c-1],itemsAvailableDict[key][c]]
+    return lowestPriceDict
+
+def printOut(lowestPriceDict,productsDict,quantityNeeded,suppliersDict):
+    """
+        Prints out to screen and writes to file details of items needed, subtotals and total
+        prints out a table: Product code | Product Name | Quantity | Supplier | Cost 
+        Total, and cost of highest order
+        Input: lowestPriceDict,productsDict,quantityNeeded,suppliersDict
+        Returns: none
+    """    
+    # Prints table to screen
+    # Creates file (Orders.txt) and saves to current folder.
+    
+    finalList = [] 
+    # lowestPriceDict.items() --> KEY: Product Code, Value: Supplier,unit cose
+    
+    file = open('Orders.txt','w')
+    total = 0
+    largestOrder = 0.0
+    
+    
+    # Header:
+    
+    file.write(writeHorizSep()+'\n'
+               '{:15}'.format('| Product Code ')+
+          '{:<16}'.format('| Product Name     ')+
+          '{:8}'.format('|Quantity')+
+          '{:17}'.format('| Supplier')+
+          '{:5}'.format('| Cost     |')+'\n'+
+          writeHorizSep()+'\n')
+    
+    printHorizSep()
+    print('{:15}'.format('| Product Code ')+
+          '{:<16}'.format('| Product Name     ')+
+          '{:8}'.format('|Quantity')+
+          '{:17}'.format('| Supplier')+
+          '{:5}'.format('| Cost     |'))
+    printHorizSep()   
+    for proCode,cost in lowestPriceDict.items():
+        # Note: cost = [supplier phone, cost]
+        
+        subTotal = (float(cost[1])*float(quantityNeeded[proCode])) # Subtotal of each item
+        
+        if subTotal >= largestOrder:
+            largestOrder = subTotal
+            largestOrderPhone = cost[0]
+            
+        
+        
+        total = total + subTotal
+        # Check if order is above 40 items; if yes, preface product name with '*'.
+        if int(quantityNeeded[proCode]) > 40:
+            productName = '|*{:^.16} '.format(productsDict[proCode])
+        else:
+            productName = '|{:^.16}  '.format(productsDict[proCode])     
+        
+        
+        finalList.append(proCode) # Product Code      
+        finalList.append(productName)  # Product Name       
+        finalList.append(quantityNeeded[proCode]) # Quantity Needed for Order
+        finalList.append(cost[0])# Supplier phone Number; (Unit Price at cost[1] when needed.) 
+        finalList.append(subTotal)# Subtotal: quantity * unit price
+        
+        print('|{:^14}'.format(proCode)+
+              '{:16}'.format(productName)+
+              '|{:8}'.format(quantityNeeded[proCode])+
+              '|' + ' ' + '('+cost[0][0:3]+')'+' '+cost[0][3:6]+' '+cost[0][6:10]+' '+
+              '|' + ' ' + '$' + '{:7.2f} |'.format(subTotal)) 
+        
+        file.write('|{:^14}'.format(proCode)+
+              '{:16}'.format(productName)+
+              '|{:8}'.format(quantityNeeded[proCode])+
+              '|' + ' ' + '('+cost[0][0:3]+')'+' '+cost[0][3:6]+' '+cost[0][6:10]+' '+
+              '|' + ' ' + '$' + '{:7.2f} |'.format(subTotal)+'\n')        
+    
+    file.write(writeHorizSep()+'\n'+
+               '|{:^14}|'.format('Total Cost')+
+               ' '*16+'${:10.2f}|'.format(total)+'\n'+
+               writeHorizSepTrunc()+
+               '\n\n'+
+               '{:^15}'.format('Highest Cost:')+
+               suppliersDict[largestOrderPhone][0]+
+               ' '+'('+largestOrderPhone[0:3]+')'+' '+largestOrderPhone[3:6]+' '+largestOrderPhone[6:10]+
+               '[${:10.2f}]'.format(largestOrder))
+    file.close()
+    
+    printHorizSep()
+    print('|{:^14}|'.format('Total Cost')+' '*16+'${:10.2f}|'.format(total)) 
+    printHorizSepTrunc()
+    print('{:^15}'.format('Highest Cost:'),suppliersDict[largestOrderPhone][0],' '+'('+largestOrderPhone[0:3]+')'+' '+largestOrderPhone[3:6]+' '+largestOrderPhone[6:10],'[${:10.2f}]'.format(largestOrder)) 
+    
+    
+    
+      
+        
+def printHorizSep():
+    # Format for horizontal separtor for printout (+-------+ etc.)
+    
+    print('+'+'-'*14 + '+' + '-'*18 + '+' + '-'*8 + '+' + '-'*16 + '+' + '-'*10 + '+')
+    
+def printHorizSepTrunc():
+    # Format for truncated horizontal separtor used after Total (+-------+ etc.)
+    
+    print('+'+'-'*14 + '+' + '-'*18 + '+' + '-'*8 + '+')
+    
+def writeHorizSep():
+    # .write version format for horizontal separtor (+-------+ etc.)
+    
+    return '+'+'-'*14 + '+' + '-'*18 + '+' + '-'*8 + '+' + '-'*16 + '+' + '-'*10 + '+'
+
+def writeHorizSepTrunc():
+    # .write version format for truncated horizontal separtor used after Total (+-------+ etc.)
+    return '+'+'-'*14 + '+' + '-'*18 + '+' + '-'*8 + '+'
+
+    
+    
+# Get inventory file      
+inventoryDict = getInventoryFile()  
+# Get Products file
+productsDict = getProductsFile()
+# Get items needed for purchase
+neededItemsDict = getNeededItems(inventoryDict)
+# Get suppliers file: phone #, comany name,  address
+suppliersDict = getSuppliersFile()
+# Get availability file: suppliers' pricing per product
+itemsAvailableDict = getAvailability()
+
+# Get lowest price for a given product
+lowestPriceDict = findLowestPrice(neededItemsDict,itemsAvailableDict)
+
+# Get number of items needed per product
+quantityNeeded = getQuantityNeeded(neededItemsDict)
+
+# Print out to screen and Orders.txt in current folder details of all items needed for purchase
+printOut(lowestPriceDict,productsDict,quantityNeeded,suppliersDict)
+
+
+
+
